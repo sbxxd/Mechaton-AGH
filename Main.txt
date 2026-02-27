@@ -1,0 +1,210 @@
+Global Preserve Integer iDetails(10)
+Global Integer intPrevious
+
+Function Main
+    Integer i, blockID, spotID, currentSpot
+    
+    Wait 3
+    Motor On
+    Power High
+    Speed 70
+    Accel 80, 50
+    CP On
+    Tool 0
+    
+    Print "Trwa resetowanie srodowiska..."
+    Go Here :Z(0)
+    Off 10
+    Wait 0.1
+    Call ResetSimGrip
+    Wait 0.1
+    
+    homecube1
+    homecube2
+    homecube3
+    homecube4
+    Wait 3
+
+    ' 0. Resetowanie zajetosci pozycji na planszy (0 = puste miejsce)
+    For i = 1 To 9
+        iDetails(i) = 0
+    Next
+    
+    Randomize
+
+    Print "Rozpoczynam faze 1: Rozstawianie klockow z magazynu na plansze"
+    
+    For i = 1 To 4
+        blockID = i
+        Print "Pobieram klocek nr: ", blockID, " z magazynu."
+        
+        Go Pallet(1, blockID) :Z(0)
+        Speed 50
+        Move Pallet(1, blockID) :Z(-55)
+        Wait 0.3
+        Grip
+        Call SimPick(blockID)
+        
+        Move Pallet(1, blockID) :Z(0)
+        Speed 70
+        
+        'Wylosuj puste miejsce 
+        Do
+            spotID = Int(Rnd(9)) + 1
+        Loop Until iDetails(spotID) = 0
+        iDetails(spotID) = blockID
+        Print " -> PRAWIDLOWO ZAREZERWOWANO miejsce: ", spotID, " dla klocka nr: ", blockID
+        
+        Go Pallet(0, spotID) :Z(0)
+        Speed 50
+        Move Pallet(0, spotID) :Z(-55)
+        Wait 0.3
+        Release
+        Call SimPlace(blockID)
+        
+        Move Pallet(0, spotID) :Z(0)
+        Speed 70
+    Next
+    
+    Print "Rozpoczynam faze 2: Mieszanie klockow na planszy"
+    
+    Do
+        'Wylosuj, który klocek chcesz przesunac
+        Do
+            blockID = Int(Rnd(4)) + 1
+        Loop Until blockID <> intPrevious
+        
+        intPrevious = blockID
+        
+        'Odszukaj, gdzie klocek lezy obecnie
+        currentSpot = 0
+        For i = 1 To 9
+            If iDetails(i) = blockID Then
+                currentSpot = i
+                Exit For
+            EndIf
+        Next i
+        
+        ' Zabezpieczenie na wypadek zgubienia klocka w pamieci
+        If currentSpot = 0 Then
+            Print "Blad logiki! Klocek nr ", blockID, " zniknal z planszy."
+            Exit Do
+        EndIf
+        
+        'Wylosuj nowe miejsce
+        Do
+            spotID = Int(Rnd(9)) + 1
+        Loop Until iDetails(spotID) = 0 And spotID <> currentSpot
+        iDetails(spotID) = blockID
+        iDetails(currentSpot) = 0
+        
+        Print "Mieszam: Przenosze klocek ", blockID, " z logicznego miejsca ", currentSpot, " na logiczne miejsce ", spotID
+        
+        'Zabierz klocek ze starego miejsca
+        Go Pallet(0, currentSpot) :Z(0)
+        Speed 50
+        Move Pallet(0, currentSpot) :Z(-55)
+        Wait 0.3
+        Grip
+        Call SimPick(blockID)
+        
+        Move Pallet(0, currentSpot) :Z(0)
+        Speed 70
+    
+        'Polóz klocek na nowym miejscu
+        Go Pallet(0, spotID) :Z(0)
+        Speed 50
+        Move Pallet(0, spotID) :Z(-55)
+        Wait 0.3
+        Release
+        Call SimPlace(blockID)
+        
+        Move Pallet(0, spotID) :Z(0)
+        Speed 70
+        
+    Loop
+Fend
+
+Function ResetSimGrip
+    OnErr GoTo IgnorePlaceErr
+    Wait 0.3
+    SimSet robot1.Place, Cube1
+    SimSet robot1.Place, Cube2
+    SimSet robot1.Place, Cube3
+    SimSet robot1.Place, Cube4
+    
+    Exit Function
+    
+IgnorePlaceErr:
+    EResume Next
+Fend
+Function Grip
+    On 10
+    Wait 0.5
+    Print "Chwytam klocek"
+Fend
+
+Function Release
+    Off 10
+    Wait 0.5
+    Print "Puszczam klocek"
+Fend
+Function SimPick(id As Integer)
+    Select id
+        Case 1
+        	Wait 0.3
+            SimSet robot1.Pick, Cube1
+        Case 2
+        	Wait 0.3
+            SimSet robot1.Pick, Cube2
+        Case 3
+        	Wait 0.3
+            SimSet robot1.Pick, Cube3
+        Case 4
+        	Wait 0.3
+            SimSet robot1.Pick, Cube4
+    Send
+Fend
+Function SimPlace(id As Integer)
+    Select id
+        Case 1
+        	Wait 0.3
+            SimSet robot1.Place, Cube1
+        Case 2
+        	Wait 0.3
+            SimSet robot1.Place, Cube2
+        Case 3
+        	Wait 0.3
+            SimSet robot1.Place, Cube3
+        Case 4
+        	Wait 0.3
+            SimSet robot1.Place, Cube4
+    Send
+Fend
+Function homecube1
+    SimSet Cube1.Visible, True
+    SimSet Cube1.PositionX, 385
+    SimSet Cube1.PositionY, 85
+    SimSet Cube1.PositionZ, 35
+Fend
+
+Function homecube2
+    SimSet Cube2.Visible, True
+    SimSet Cube2.PositionX, 385
+    SimSet Cube2.PositionY, 30
+    SimSet Cube2.PositionZ, 35
+Fend
+
+Function homecube3
+    SimSet Cube3.Visible, True
+    SimSet Cube3.PositionX, 330
+    SimSet Cube3.PositionY, 85
+    SimSet Cube3.PositionZ, 35
+Fend
+
+Function homecube4
+    SimSet Cube4.Visible, True
+    SimSet Cube4.PositionX, 330
+    SimSet Cube4.PositionY, 30
+    SimSet Cube4.PositionZ, 35
+Fend
